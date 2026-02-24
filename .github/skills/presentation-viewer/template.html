@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}}</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --border: #30363d;
+    --code-bg: #1c2128;
+    --slide-max: 960px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ── slide container ── */
+  #deck {
+    position: fixed;
+    top: 3px;
+    left: 0;
+    right: 0;
+    bottom: 52px;
+  }
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    overflow-y: auto;
+    padding: 48px 64px 32px;
+    scroll-behavior: smooth;
+  }
+  .slide.active { display: block; }
+
+  .slide-inner {
+    max-width: var(--slide-max);
+    margin: 0 auto;
+  }
+
+  /* ── typography ── */
+  .slide h1 {
+    font-size: 2rem;
+    margin-bottom: 0.15em;
+    color: var(--accent);
+    border-bottom: none;
+  }
+  .slide h2 {
+    font-size: 1.25rem;
+    font-weight: 400;
+    color: var(--muted);
+    margin-bottom: 1.2em;
+  }
+  .slide h3 {
+    font-size: 1.15rem;
+    margin-top: 1.6em;
+    margin-bottom: 0.5em;
+    color: var(--text);
+  }
+  .slide hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5em 0;
+  }
+  .slide p { line-height: 1.65; margin-bottom: 0.7em; }
+  .slide ul, .slide ol { padding-left: 1.4em; margin-bottom: 0.7em; }
+  .slide li { margin-bottom: 0.3em; line-height: 1.55; }
+  .slide strong { color: #fff; }
+  .slide a { color: var(--accent); text-decoration: none; }
+  .slide a:hover { text-decoration: underline; }
+  .slide blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 0.4em 1em;
+    margin: 0.8em 0;
+    color: var(--muted);
+    background: var(--code-bg);
+    border-radius: 4px;
+  }
+
+  /* ── code ── */
+  .slide pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1em;
+    overflow-x: auto;
+    margin: 0.7em 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .slide code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.88em;
+  }
+  .slide :not(pre) > code {
+    background: var(--code-bg);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── tables ── */
+  .slide table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.7em 0;
+    font-size: 0.88rem;
+  }
+  .slide th, .slide td {
+    border: 1px solid var(--border);
+    padding: 0.45em 0.7em;
+    text-align: left;
+  }
+  .slide th { background: var(--code-bg); color: var(--accent); font-weight: 600; }
+  .slide td { vertical-align: top; }
+
+  /* ── mermaid ── */
+  .mermaid { margin: 1em 0; text-align: center; }
+  .mermaid svg { max-width: 100%; }
+  .mermaid foreignObject { overflow: visible !important; }
+  .mermaid foreignObject div {
+    white-space: break-spaces !important;
+    text-overflow: unset !important;
+    overflow: visible !important;
+  }
+
+  /* ── nav bar ── */
+  #nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 100;
+    padding: 0 24px;
+  }
+  #nav button {
+    background: var(--code-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 18px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #nav button:hover { background: var(--border); }
+  #nav button:disabled { opacity: 0.3; cursor: default; }
+  #counter {
+    color: var(--muted);
+    font-size: 0.85rem;
+    min-width: 80px;
+    text-align: center;
+    user-select: none;
+  }
+
+  /* ── slide picker ── */
+  #picker {
+    position: fixed;
+    bottom: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 50vh;
+    overflow-y: auto;
+    width: 360px;
+    display: none;
+    z-index: 200;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  #picker.open { display: block; }
+  #picker .pick-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  #picker .pick-item:hover, #picker .pick-item.active {
+    background: var(--border);
+    color: var(--accent);
+  }
+  #picker .pick-item:last-child { border-bottom: none; }
+
+  /* ── progress bar ── */
+  #progress {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    z-index: 100;
+  }
+  #progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+    width: 0;
+  }
+
+  /* scrollbar */
+  .slide::-webkit-scrollbar { width: 6px; }
+  .slide::-webkit-scrollbar-track { background: transparent; }
+  .slide::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="progress"><div id="progress-fill"></div></div>
+<div id="deck"></div>
+<div id="picker"></div>
+<nav id="nav">
+  <button id="btn-prev" title="← Previous">&larr; Prev</button>
+  <button id="btn-list" title="Slide list">&#9776;</button>
+  <span id="counter"></span>
+  <button id="btn-next" title="Next →">Next &rarr;</button>
+</nav>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// SLIDE CONTENT — replace this section for each presentation
+// ══════════════════════════════════════════════════════════
+const slides = [];
+
+// {{SLIDES_JS}}
+// Insert one slides.push(`...`); per slide file here.
+// Example:
+// slides.push(`# My First Slide\n\nHello world.`);
+// slides.push(`# Second Slide\n\n- Bullet one\n- Bullet two`);
+
+// ══════════════════════════════════════════════════════════
+// SLIDE TITLES — for the picker overlay
+// ══════════════════════════════════════════════════════════
+// {{TITLES_JS}}
+// Example:
+// const titles = ['0 — Title', '1 — Introduction', '2 — Details'];
+const titles = [];
+
+// ══════════════════════════════════════════════════════════
+// ENGINE — do not modify below this line
+// ══════════════════════════════════════════════════════════
+let current = 0;
+const deck = document.getElementById('deck');
+const counter = document.getElementById('counter');
+const progressFill = document.getElementById('progress-fill');
+const picker = document.getElementById('picker');
+const btnPrev = document.getElementById('btn-prev');
+const btnNext = document.getElementById('btn-next');
+const btnList = document.getElementById('btn-list');
+
+marked.setOptions({ breaks: true, gfm: true });
+
+slides.forEach((md, i) => {
+  const el = document.createElement('div');
+  el.className = 'slide' + (i === 0 ? ' active' : '');
+  el.innerHTML = '<div class="slide-inner">' + marked.parse(md) + '</div>';
+  deck.appendChild(el);
+});
+
+titles.forEach((t, i) => {
+  const d = document.createElement('div');
+  d.className = 'pick-item' + (i === 0 ? ' active' : '');
+  d.textContent = t;
+  d.addEventListener('click', () => { goTo(i); closePicker(); });
+  picker.appendChild(d);
+});
+
+function updateUI() {
+  const els = deck.querySelectorAll('.slide');
+  els.forEach((el, i) => el.classList.toggle('active', i === current));
+  counter.textContent = (current + 1) + ' / ' + slides.length;
+  progressFill.style.width = ((current / (slides.length - 1)) * 100) + '%';
+  btnPrev.disabled = current === 0;
+  btnNext.disabled = current === slides.length - 1;
+  picker.querySelectorAll('.pick-item').forEach((el, i) =>
+    el.classList.toggle('active', i === current));
+  deck.querySelector('.slide.active').scrollTop = 0;
+}
+
+function goTo(idx) {
+  if (idx < 0 || idx >= slides.length) return;
+  current = idx;
+  updateUI();
+}
+function next() { goTo(current + 1); }
+function prev() { goTo(current - 1); }
+function closePicker() { picker.classList.remove('open'); }
+
+btnPrev.addEventListener('click', prev);
+btnNext.addEventListener('click', next);
+btnList.addEventListener('click', () => picker.classList.toggle('open'));
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+    e.preventDefault(); next();
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault(); prev();
+  }
+  if (e.key === 'Escape') closePicker();
+  if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+  if (e.key === 'End') { e.preventDefault(); goTo(slides.length - 1); }
+});
+
+document.addEventListener('click', (e) => {
+  if (!picker.contains(e.target) && e.target !== btnList) closePicker();
+});
+
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#1a73e8',
+    primaryTextColor: '#fff',
+    lineColor: '#58a6ff',
+    secondaryColor: '#161b22',
+    tertiaryColor: '#0d1117'
+  }
+});
+
+async function renderMermaid() {
+  const blocks = deck.querySelectorAll('pre code.language-mermaid');
+  for (let i = 0; i < blocks.length; i++) {
+    const pre = blocks[i].parentElement;
+    const code = blocks[i].textContent;
+    const id = 'mermaid-' + i;
+    try {
+      const { svg } = await mermaid.render(id, code);
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerHTML = svg;
+      pre.replaceWith(div);
+    } catch (err) {
+      console.warn('Mermaid render failed for block ' + i, err);
+    }
+  }
+}
+
+renderMermaid().then(() => updateUI());
+</script>
+</body>
+</html>

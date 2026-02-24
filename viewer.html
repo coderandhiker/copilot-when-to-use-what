@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agents, Sub-Agents, Prompts, Instructions &amp; Skills</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --border: #30363d;
+    --code-bg: #1c2128;
+    --slide-max: 960px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ── slide container ── */
+  #deck {
+    position: fixed;
+    top: 3px;
+    left: 0;
+    right: 0;
+    bottom: 52px;
+  }
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    overflow-y: auto;
+    padding: 48px 64px 32px;
+    scroll-behavior: smooth;
+  }
+  .slide.active { display: block; }
+
+  .slide-inner {
+    max-width: var(--slide-max);
+    margin: 0 auto;
+  }
+
+  /* ── typography ── */
+  .slide h1 {
+    font-size: 2rem;
+    margin-bottom: 0.15em;
+    color: var(--accent);
+    border-bottom: none;
+  }
+  .slide h2 {
+    font-size: 1.25rem;
+    font-weight: 400;
+    color: var(--muted);
+    margin-bottom: 1.2em;
+  }
+  .slide h3 {
+    font-size: 1.15rem;
+    margin-top: 1.6em;
+    margin-bottom: 0.5em;
+    color: var(--text);
+  }
+  .slide hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5em 0;
+  }
+  .slide p { line-height: 1.65; margin-bottom: 0.7em; }
+  .slide ul, .slide ol { padding-left: 1.4em; margin-bottom: 0.7em; }
+  .slide li { margin-bottom: 0.3em; line-height: 1.55; }
+  .slide strong { color: #fff; }
+  .slide a { color: var(--accent); text-decoration: none; }
+  .slide a:hover { text-decoration: underline; }
+  .slide blockquote {
+    border-left: 3px solid var(--accent);
+    padding: 0.4em 1em;
+    margin: 0.8em 0;
+    color: var(--muted);
+    background: var(--code-bg);
+    border-radius: 4px;
+  }
+
+  /* ── code ── */
+  .slide pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1em;
+    overflow-x: auto;
+    margin: 0.7em 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .slide code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.88em;
+  }
+  .slide :not(pre) > code {
+    background: var(--code-bg);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── tables ── */
+  .slide table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.7em 0;
+    font-size: 0.88rem;
+  }
+  .slide th, .slide td {
+    border: 1px solid var(--border);
+    padding: 0.45em 0.7em;
+    text-align: left;
+  }
+  .slide th { background: var(--code-bg); color: var(--accent); font-weight: 600; }
+  .slide td { vertical-align: top; }
+
+  /* ── mermaid ── */
+  .mermaid { margin: 1em 0; text-align: center; }
+  .mermaid svg { max-width: 100%; }
+  .mermaid foreignObject { overflow: visible !important; }
+  .mermaid foreignObject div {
+    white-space: break-spaces !important;
+    text-overflow: unset !important;
+    overflow: visible !important;
+  }
+
+  /* ── nav bar ── */
+  #nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 100;
+    padding: 0 24px;
+  }
+  #nav button {
+    background: var(--code-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 18px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #nav button:hover { background: var(--border); }
+  #nav button:disabled { opacity: 0.3; cursor: default; }
+  #counter {
+    color: var(--muted);
+    font-size: 0.85rem;
+    min-width: 80px;
+    text-align: center;
+    user-select: none;
+  }
+
+  /* ── slide picker ── */
+  #picker {
+    position: fixed;
+    bottom: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 50vh;
+    overflow-y: auto;
+    width: 360px;
+    display: none;
+    z-index: 200;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  #picker.open { display: block; }
+  #picker .pick-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  #picker .pick-item:hover, #picker .pick-item.active {
+    background: var(--border);
+    color: var(--accent);
+  }
+  #picker .pick-item:last-child { border-bottom: none; }
+
+  /* ── progress bar ── */
+  #progress {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    z-index: 100;
+  }
+  #progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+    width: 0;
+  }
+
+  /* scrollbar */
+  .slide::-webkit-scrollbar { width: 6px; }
+  .slide::-webkit-scrollbar-track { background: transparent; }
+  .slide::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="progress"><div id="progress-fill"></div></div>
+<div id="deck"></div>
+<div id="picker"></div>
+<nav id="nav">
+  <button id="btn-prev" title="← Previous">&larr; Prev</button>
+  <button id="btn-list" title="Slide list">&#9776;</button>
+  <span id="counter"></span>
+  <button id="btn-next" title="Next →">Next &rarr;</button>
+</nav>
+
+<script>
+// ── slide markdown sources ──
+const slides = [];
+
+slides.push(`# Agents, Sub-Agents, Prompts, Instructions & Skills
+
+## The GitHub Copilot Customization Stack — When to Use What
+
+---
+
+\`\`\`
+  ┌─────────────────────────────────────────────────────────┐
+  │                                                         │
+  │   "I have five knobs. Which one do I turn?"             │
+  │                                                         │
+  │   ┌───────────┐  ┌──────────────┐  ┌────────────────┐  │
+  │   │  Prompts   │  │ Instructions │  │    Skills       │  │
+  │   └───────────┘  └──────────────┘  └────────────────┘  │
+  │   ┌───────────┐  ┌──────────────┐                      │
+  │   │  Agents    │  │  Sub-agents  │                      │
+  │   └───────────┘  └──────────────┘                      │
+  │                                                         │
+  └─────────────────────────────────────────────────────────┘
+\`\`\`
+
+---
+
+**Chris** · AI Talks · February 2026
+
+> *These concepts form a shared vocabulary across GitHub Copilot, Claude Code,
+> and the broader agent ecosystem. Today we'll map them specifically to
+> **Copilot Agent Mode in VS Code**, **Copilot CLI**, and the **Copilot SDK**.*`);
+
+slides.push(`# The Problem
+
+## Five terms. Overlapping definitions. No clear decision guide.
+
+---
+
+You're building a repo. You want Copilot to "just know" your conventions.
+You've heard about all of these:
+
+| Term | What people *think* it means |
+|------|------|
+| **Prompt** | "The thing I type in chat" |
+| **Instructions** | "Some markdown file… somewhere?" |
+| **Prompt file** | "Wait, isn't that the same as instructions?" |
+| **Skill** | "Like a plugin? Or a prompt? Or…?" |
+| **Agent** | "Agent mode, right? The thing I'm already using?" |
+| **Sub-agent** | "An agent… inside an agent?" |
+
+---
+
+### The real question
+
+\`\`\`
+  You're about to add structure to your Copilot workflow.
+
+  ┌────────────────────────────────────────────────────┐
+  │                                                    │
+  │   Should I put this in...                          │
+  │                                                    │
+  │     □ copilot-instructions.md ?                    │
+  │     □ a .prompt.md file ?                          │
+  │     □ a SKILL.md ?                                 │
+  │     □ an .agent.md ?                               │
+  │     □ just... type it in chat every time?          │
+  │                                                    │
+  └────────────────────────────────────────────────────┘
+\`\`\`
+
+By the end of this talk, you'll have a clear decision framework.`);
+
+slides.push(`# The Mental Model
+
+## Think in layers of **persistence** and **scope**
+
+---
+
+\`\`\`mermaid
+graph TB
+    subgraph "ONE-OFF"
+        P["💬 Prompt<br/>Typed in chat. Gone next session."]
+    end
+
+    subgraph "ALWAYS-ON"
+        I["📜 Instructions<br/>Auto-loaded every session.<br/>Your repo's constitution."]
+    end
+
+    subgraph "ON-DEMAND"
+        PF["📋 Prompt File<br/>Reusable macro. Run when invoked."]
+        SK["🧰 Skill<br/>Packaged expertise + artifacts.<br/>Auto-discovered by task match."]
+    end
+
+    subgraph "MODE SWITCH"
+        AG["🤖 Agent<br/>A persona + toolset.<br/>Switch into it for a role."]
+    end
+
+    subgraph "DELEGATION"
+        SA["🔀 Sub-agent<br/>Isolated worker. Own context.<br/>Returns summary only."]
+    end
+
+    P --> I
+    I --> PF
+    PF --> SK
+    SK --> AG
+    AG --> SA
+
+    style P fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    style I fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    style PF fill:#e0e7ff,stroke:#6366f1,color:#312e81
+    style SK fill:#d1fae5,stroke:#10b981,color:#064e3b
+    style AG fill:#fce7f3,stroke:#ec4899,color:#831843
+    style SA fill:#f3e8ff,stroke:#8b5cf6,color:#4c1d95
+\`\`\`
+
+---
+
+### The two axes that matter
+
+|  | **Ephemeral** | **Persistent** |
+|--|--|--|
+| **Broad scope** (all tasks) | Prompt | Instructions |
+| **Narrow scope** (specific tasks) | Prompt file | Skill |
+| **Role-based** (persona + tools) | — | Agent |
+| **Isolated execution** | — | Sub-agent |
+
+> **Key insight:** Moving down this stack = more structure, more reusability,
+> more investment to set up — but dramatically better consistency.`);
+
+slides.push(`# Instructions
+
+## Your repo's constitution — boring, stable, always-on
+
+---
+
+### What they are
+
+Instructions are markdown files that Copilot **automatically injects into every
+chat request**. You never have to remember to include them. They just apply.
+
+---
+
+### The three flavors
+
+\`\`\`
+your-repo/
+├── .github/
+│   ├── copilot-instructions.md          ← repo-wide (always-on)
+│   └── instructions/
+│       ├── python-standards.instructions.md   ← path-specific
+│       ├── react-components.instructions.md   ← path-specific
+│       └── testing.instructions.md            ← path-specific
+├── AGENTS.md                             ← cross-agent compatible
+├── CLAUDE.md                             ← cross-agent compatible
+└── src/
+    └── ...
+\`\`\`
+
+---
+
+### 1. Repo-wide: \`copilot-instructions.md\`
+
+Applied to **every** chat request in the workspace. No conditions.
+
+\`\`\`markdown
+<!-- .github/copilot-instructions.md -->
+
+# Project: Contoso API
+
+## Tech stack
+- Node.js 22 + TypeScript 5.7 (strict mode)
+- Express 5 with Zod validation
+- PostgreSQL 17 via Drizzle ORM
+- Vitest for testing
+
+## Conventions
+- All API handlers go in \\\`src/routes/\\\`
+- Use Zod schemas for request validation — never trust raw input
+- Error responses follow RFC 9457 (Problem Details)
+- No default exports. Use named exports everywhere.
+\`\`\`
+
+---
+
+### 2. Path-specific: \`*.instructions.md\`
+
+Applied **only** when Copilot is working on files matching the \`applyTo\` glob.
+
+\`\`\`markdown
+---
+name: 'React Components'
+description: 'Standards for React component files'
+applyTo: 'src/components/**/*.tsx'
+---
+
+# React Component Standards
+
+- Use function components with arrow syntax
+- Props interface must be exported and named \\\`{Component}Props\\\`
+- Use \\\`clsx\\\` for conditional classNames, never string concatenation
+- Co-locate tests: \\\`Button.tsx\\\` → \\\`Button.test.tsx\\\`
+\`\`\`
+
+---
+
+### 3. Cross-agent: \`AGENTS.md\` and \`CLAUDE.md\`
+
+VS Code natively detects these files too. One instruction file, multiple agent ecosystems.
+
+---
+
+### When to use instructions
+
+✅ Team coding standards and naming conventions
+✅ Build/test/lint commands ("always run X before Y")
+✅ Architectural constraints ("never put business logic in controllers")
+✅ Security guardrails ("always validate input with Zod")
+
+❌ NOT for one-off tasks
+❌ NOT for personal preferences (use user-level settings instead)
+
+> **Rule of thumb:** If violating it would cause a code review rejection,
+> it belongs in instructions.`);
+
+slides.push(`# Prompt Files
+
+## Reusable macros you invoke on demand
+
+---
+
+### What they are
+
+Prompt files are \`.prompt.md\` files that act like **saved recipes**. Unlike
+instructions (which are always-on), prompt files are **invoked explicitly** via
+\`/\` slash command in chat. They can wire in tools, reference agents, and define
+multi-step workflows.
+
+> **Status:** Public preview — VS Code, Visual Studio, and JetBrains
+
+---
+
+### Anatomy of a prompt file
+
+\`\`\`markdown
+---
+name: 'New API Endpoint'
+description: 'Scaffold a complete REST endpoint with validation, handler, and test'
+tools:
+  - run_in_terminal
+  - file_search
+  - grep_search
+---
+
+# New API Endpoint
+
+## Inputs
+- **Resource name:** \\\${input:resource}  (e.g., "users", "orders")
+- **HTTP method:** \\\${input:method}      (e.g., GET, POST, PUT, DELETE)
+
+## Steps
+1. Create src/routes/resource.ts with a Zod schema and Express handler
+2. Create src/routes/resource.test.ts with tests
+3. Register the route in src/routes/index.ts
+4. Run npm run lint and npm test to verify
+\`\`\`
+
+---
+
+### Invoking a prompt file
+
+In VS Code chat, type \`/\` and select the prompt:
+
+\`\`\`
+User:  /new-api-endpoint
+
+       resource: products
+       method: POST
+\`\`\`
+
+---
+
+### Context variables
+
+Prompt files support built-in context variables using \`\${variableName}\` syntax:
+
+| Category    | Variables                                                              |
+|-------------|------------------------------------------------------------------------|
+| Workspace   | \`\${workspaceFolder}\`, \`\${workspaceFolderBasename}\`                     |
+| Selection   | \`\${selection}\`, \`\${selectedText}\`                                      |
+| File        | \`\${file}\`, \`\${fileBasename}\`, \`\${fileDirname}\`                       |
+| User input  | \`\${input:varName}\`, \`\${input:varName:placeholder}\`                     |
+
+> \`\${input:x}\` prompts the user for a value when the prompt file runs.
+> The other variables are filled in automatically from editor state.
+
+---
+
+### Instructions vs. Prompt Files — at a glance
+
+\`\`\`
+┌─────────────────────┬──────────────────────────────────┐
+│                     │  Instructions   │  Prompt Files  │
+├─────────────────────┼─────────────────┼────────────────┤
+│ Activation          │  Always-on      │  On-demand (/) │
+│ Purpose             │  Guardrails     │  Recipes       │
+│ Variables           │  No             │  Yes (\${x})    │
+│ Tool references     │  No             │  Yes           │
+│ Agent references    │  No             │  Yes           │
+│ Shared with team    │  ✅ via repo    │  ✅ via repo   │
+│ File extension      │  .instructions  │  .prompt.md    │
+│                     │  .md            │                │
+└─────────────────────┴─────────────────┴────────────────┘
+\`\`\`
+
+> **Rule of thumb:** Instructions say "always do this."
+> Prompt files say "when I ask, do *this sequence*."`);
+
+slides.push(`# Skills
+
+## Portable, composable abilities any agent can learn
+
+---
+
+### What they are
+
+A Skill is a **self-contained capability** — a bundle of instructions, example
+code, and supporting scripts that teaches an agent how to do one thing well.
+Skills are portable across agents and repos. Think of them as plugins for
+your AI.
+
+> **Status:** GA (General Availability) — shipped with VS Code 1.109 (Jan 2026)
+
+---
+
+### Anatomy of a skill
+
+Every skill lives in its own folder with a \`SKILL.md\` file at the root:
+
+\`\`\`
+.github/skills/
+├── deploy-preview/
+│   ├── SKILL.md                  ← required: entry point
+│   ├── deploy.sh                 ← supporting script
+│   └── examples/
+│       └── preview-config.yaml   ← reference files
+├── create-migration/
+│   ├── SKILL.md
+│   ├── migrate.ts
+│   └── templates/
+│       ├── create-table.sql
+│       └── alter-table.sql
+└── generate-openapi/
+    ├── SKILL.md
+    └── openapi-template.yaml
+\`\`\`
+
+---
+
+### YAML frontmatter — what's required
+
+\`\`\`yaml
+---
+name: 'skill-name'           # Required — unique identifier
+description: 'What it does'  # Required — used for skill discovery
+---
+\`\`\`
+
+That's it. Two fields. Copilot uses the description to decide when to suggest the skill.
+
+---
+
+### What makes a good skill
+
+\`\`\`mermaid
+graph LR
+    A[Self-contained] --> B[One clear purpose]
+    B --> C[Declarative steps]
+    C --> D[Includes examples]
+    D --> E[Portable across repos]
+
+    style A fill:#1a73e8,color:#fff
+    style B fill:#1a73e8,color:#fff
+    style C fill:#1a73e8,color:#fff
+    style D fill:#1a73e8,color:#fff
+    style E fill:#1a73e8,color:#fff
+\`\`\`
+
+| Good skill                          | Bad skill                              |
+|-------------------------------------|----------------------------------------|
+| "Deploy a preview environment"      | "Do everything for deployment"         |
+| "Generate an OpenAPI spec from code"| "Handle all API documentation"         |
+| "Create a DB migration from diff"   | "Manage the database"                  |
+| Focused, testable, composable       | Vague, sprawling, monolithic           |
+
+---
+
+### Skills vs. Instructions — the crucial difference
+
+\`\`\`
+Instructions:  "Always use Zod for validation"
+               → passive, always-on, no action
+
+Skills:        "Here's HOW to create a Zod schema for a new endpoint,
+                including the template, the test, and the registration"
+               → active, invokable, produces output
+\`\`\`
+
+> **Rule of thumb:** Instructions set the rules.
+> Skills teach the moves.`);
+
+slides.push(`# Agents
+
+## Autonomous personas with their own tools and personality
+
+---
+
+### What they are
+
+An Agent is a **full persona** — an identity with its own system prompt,
+tool set, model preference, and behavioral constraints.
+
+Unlike instructions (passive rules) or skills (invokable capabilities),
+agents are **actors** that make decisions and choose which tools to use.
+
+---
+
+### Anatomy of an \`.agent.md\` file
+
+\`\`\`markdown
+---
+name: 'reviewer'
+description: 'Senior code reviewer — catches bugs, style issues, and security gaps'
+tools:
+  - grep_search
+  - read_file
+  - get_errors
+  - run_in_terminal
+model: 'claude-sonnet-4'
+---
+
+# Code Reviewer
+
+You are a senior engineer performing a thorough code review.
+
+## Approach
+1. Read the changed files to understand what was modified
+2. Check for logic errors, security vulnerabilities, performance issues
+3. Run the test suite to verify nothing is broken
+4. Provide a structured review with severity ratings
+\`\`\`
+
+---
+
+### Frontmatter fields
+
+\`\`\`yaml
+---
+name: 'agent-name'           # Required — the handle
+description: 'What I do'     # Required — shown in agent picker
+tools:                        # Optional — restrict available tools
+  - read_file
+  - grep_search
+  - run_in_terminal
+model: 'claude-sonnet-4'     # Optional — override default model
+agents:                       # Optional — restrict which subagents
+  - implementer
+  - tester
+---
+\`\`\`
+
+---
+
+### What separates agents from the rest
+
+\`\`\`
+┌──────────────┬───────────┬──────────┬──────────┬──────────┐
+│              │Instructions│ Prompts  │ Skills   │ Agents   │
+├──────────────┼───────────┼──────────┼──────────┼──────────┤
+│ Has identity │     ❌     │    ❌    │    ❌    │    ✅    │
+│ Chooses tools│     ❌     │    ❌    │    ❌    │    ✅    │
+│ Has persona  │     ❌     │    ❌    │    ❌    │    ✅    │
+│ Autonomous   │     ❌     │    ❌    │  Partial │    ✅    │
+│ Composable   │     ✅     │    ✅    │    ✅    │    ✅    │
+│ Always-on    │     ✅     │    ❌    │    ❌    │    ❌    │
+└──────────────┴───────────┴──────────┴──────────┴──────────┘
+\`\`\`
+
+> **Rule of thumb:** If you'd assign it to a specific person on your team,
+> it's an agent.`);
+
+slides.push(`# Sub-Agents
+
+## Delegation with isolation — agents calling agents
+
+---
+
+### What they are
+
+A sub-agent is an **agent that another agent spawns** to handle a focused
+sub-task. The key word is *isolation* — each sub-agent gets its own context
+window, preventing one task's details from polluting another.
+
+Sub-agents are **not a new file format**. They use the same \`.agent.md\` files.
+What makes them "sub" is that they're invoked by another agent, not by you.
+
+---
+
+### How it works
+
+\`\`\`mermaid
+graph TD
+    U[You] -->|"@planner build auth"| P[Planner Agent]
+    P -->|spawns| I[Implementer Sub-Agent]
+    P -->|spawns| T[Tester Sub-Agent]
+    P -->|spawns| R[Reviewer Sub-Agent]
+    I -->|code changes| P
+    T -->|test results| P
+    R -->|review notes| P
+    P -->|final summary| U
+
+    style U fill:#333,color:#fff
+    style P fill:#1a73e8,color:#fff
+    style I fill:#34a853,color:#fff
+    style T fill:#34a853,color:#fff
+    style R fill:#34a853,color:#fff
+\`\`\`
+
+**You talk to the planner. The planner delegates. You get the result.**
+
+---
+
+### Controlling sub-agent access
+
+\`\`\`
+┌──────────────────────────┬───────────┬──────────────┐
+│ Setting                  │ User can  │ Agent can    │
+│                          │ invoke    │ spawn as sub │
+├──────────────────────────┼───────────┼──────────────┤
+│ (defaults)               │    ✅     │      ✅      │
+│ user-invokable: false    │    ❌     │      ✅      │
+│ disable-model-invocation │    ✅     │      ❌      │
+│   : true                 │           │              │
+└──────────────────────────┴───────────┴──────────────┘
+\`\`\`
+
+---
+
+### Why isolation matters
+
+\`\`\`
+Without sub-agents (single context):
+  Context window: [requirements] [500 LOC] [test output] [lint] [review] …
+  → Context gets noisy. Agent loses focus. Quality drops.
+
+With sub-agents (isolated contexts):
+  Implementer: [requirements] [relevant source files]
+  Tester:      [requirements] [implementation diff]
+  Reviewer:    [implementation diff] [test results]
+  → Each agent sees only what it needs. Focused. Accurate.
+\`\`\`
+
+> **Rule of thumb:** If you'd CC someone on the email vs. assign them a
+> separate ticket, that's the difference between sharing context and
+> spawning a sub-agent.`);
+
+slides.push(`# The Spectrum
+
+## Putting it all together — from passive to autonomous
+
+---
+
+### The full picture
+
+\`\`\`
+  Passive                                                    Autonomous
+  (rules)                                                    (actors)
+    │                                                            │
+    ▼                                                            ▼
+┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+│          │  │          │  │          │  │          │  │          │
+│ Instruc- │→ │ Prompt   │→ │ Skills   │→ │ Agents   │→ │Sub-Agents│
+│ tions    │  │ Files    │  │          │  │          │  │          │
+│          │  │          │  │          │  │          │  │          │
+└──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘
+    │              │              │              │              │
+  Always-on     On-demand     Invokable      Identity      Delegation
+  Guardrails    Recipes       Capability     + Tools       + Isolation
+\`\`\`
+
+---
+
+### Side-by-side comparison
+
+| Dimension         | Instructions          | Prompt Files       | Skills              | Agents             | Sub-Agents          |
+|-------------------|-----------------------|--------------------|---------------------|--------------------|---------------------|
+| **Activation**    | Automatic             | \`/\` slash command  | Agent-selected      | Agent dropdown     | Agent-spawned       |
+| **Persistence**   | Permanent per repo    | Permanent per repo | Permanent per repo  | Permanent per repo | Ephemeral per task  |
+| **Scope**         | Broad (all requests)  | Narrow (one task)  | Narrow (one ability)| Broad (persona)    | Narrow (sub-task)   |
+| **Identity**      | None                  | None               | None                | Yes — persona      | Yes — inherited     |
+| **File**          | \`*.instructions.md\`  | \`*.prompt.md\`      | \`SKILL.md\`          | \`*.agent.md\`       | Same \`*.agent.md\`   |
+
+---
+
+### The nesting relationship
+
+\`\`\`mermaid
+graph TD
+    subgraph "Always Active"
+        INS[Instructions<br/>copilot-instructions.md<br/>*.instructions.md]
+    end
+
+    subgraph "User-Invoked"
+        PF[Prompt Files<br/>.prompt.md]
+        AG[Agents<br/>.agent.md]
+    end
+
+    subgraph "Agent-Invoked"
+        SK[Skills<br/>SKILL.md]
+        SA[Sub-Agents<br/>.agent.md]
+    end
+
+    INS -.->|"injected into"| AG
+    INS -.->|"injected into"| PF
+    PF -->|"can reference"| AG
+    AG -->|"can invoke"| SK
+    AG -->|"can spawn"| SA
+    SA -->|"can invoke"| SK
+    SA -->|"can spawn"| SA
+
+    style INS fill:#4285f4,color:#fff
+    style PF fill:#fbbc04,color:#000
+    style SK fill:#34a853,color:#fff
+    style AG fill:#ea4335,color:#fff
+    style SA fill:#ea4335,color:#fff
+\`\`\`
+
+Key insight: **Instructions flow DOWN into everything.** They're the
+constitution that all agents, prompt files, and skills inherit.
+
+---
+
+### Decision flow — "which one do I need?"
+
+\`\`\`
+START: I want to customize Copilot's behavior
+  │
+  ├─ Is this a rule that should ALWAYS apply?
+  │    YES → Instructions (.instructions.md / copilot-instructions.md)
+  │
+  ├─ Is this a repeatable recipe I'll invoke by name?
+  │    YES → Prompt File (.prompt.md)
+  │
+  ├─ Is this a capability an agent should have?
+  │    YES → Skill (SKILL.md)
+  │
+  ├─ Does it need its own identity, tools, or persona?
+  │    YES → Agent (.agent.md)
+  │
+  └─ Does an agent need to delegate focused work with isolation?
+       YES → Sub-Agent (same .agent.md, spawned by another agent)
+\`\`\``);
+
+slides.push(`# The Multi-Agent Reality
+
+## VS Code as the orchestration hub
+
+---
+
+### VS Code 1.109 — the multi-agent hub
+
+Since January 2026, VS Code natively hosts **multiple agent backends**
+side by side:
+
+\`\`\`
+┌─────────────────────────────────────────────────────┐
+│                    VS Code 1.109                     │
+│                                                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
+│  │  Copilot  │  │  Claude   │  │  Custom  │  ...    │
+│  │  Agent    │  │  Agent    │  │  Agents  │          │
+│  └─────┬────┘  └─────┬────┘  └─────┬────┘          │
+│        │              │              │               │
+│        └──────────────┴──────────────┘               │
+│                       │                              │
+│              Shared workspace                        │
+│              Shared terminal                         │
+│              Shared file system                      │
+│              Shared instruction files                │
+└─────────────────────────────────────────────────────┘
+\`\`\`
+
+---
+
+### Cross-agent instruction files
+
+\`\`\`
+your-repo/
+├── .github/
+│   └── copilot-instructions.md     ← Copilot reads this
+├── AGENTS.md                        ← VS Code agents read this
+├── CLAUDE.md                        ← Claude agent reads this
+└── src/...
+\`\`\`
+
+Write once, get compliance across ecosystems.
+
+---
+
+### Copilot vs. Claude Code — file conventions
+
+| Concept        | Copilot (VS Code)            | Claude Code               |
+|----------------|------------------------------|---------------------------|
+| Instructions   | \`copilot-instructions.md\`    | \`CLAUDE.md\`               |
+| Modular rules  | \`*.instructions.md\`          | \`.claude/rules/*.md\`      |
+| Skills         | \`.github/skills/\`            | \`.claude/skills/\`         |
+| Agents         | \`.github/agents/*.agent.md\`  | \`.claude/agents/*.md\`     |
+| Hooks          | \`.github/hooks/*.json\`       | \`.claude/hooks/\`          |
+| Memory         | *(session-based)*            | \`.claude/memory.json\`     |
+
+> **The mental model transfers.** Learn it once for Copilot,
+> and you already know 90% of Claude Code's architecture.
+> \`SKILL.md\` is even the same file format across both.`);
+
+slides.push(`# Practical Operating Model
+
+## The five-step plan you can use tomorrow
+
+---
+
+### Step 1: Write your repo's constitution
+
+Create \`.github/copilot-instructions.md\` — your stack, build commands, and non-negotiable rules.
+
+**Time: 15 minutes. Impact: Every Copilot interaction improves immediately.**
+
+---
+
+### Step 2: Add path-specific instructions
+
+\`\`\`
+.github/instructions/
+├── api-routes.instructions.md       → applyTo: 'src/routes/**'
+├── react-components.instructions.md → applyTo: 'src/components/**'
+├── database.instructions.md         → applyTo: 'src/db/**'
+└── tests.instructions.md            → applyTo: '**/*.test.ts'
+\`\`\`
+
+**Time: 30 minutes. Impact: Context-aware guidance without noise.**
+
+---
+
+### Step 3: Create your first prompt files
+
+\`\`\`
+.github/prompts/
+├── new-endpoint.prompt.md      ← "scaffold a REST endpoint"
+├── add-test-coverage.prompt.md ← "add tests for uncovered code"
+└── fix-ci.prompt.md            ← "diagnose and fix the CI failure"
+\`\`\`
+
+**Time: 1 hour. Impact: Repeatable, high-quality task execution.**
+
+---
+
+### Step 4: Build your first skill &nbsp;&nbsp;|&nbsp;&nbsp; Step 5: Define specialist agents
+
+\`\`\`
+.github/skills/                .github/agents/
+└── create-migration/          ├── implementer.agent.md
+    ├── SKILL.md               ├── reviewer.agent.md
+    └── templates/             └── planner.agent.md
+        └── migration.sql
+\`\`\`
+
+---
+
+### The maturity curve
+
+\`\`\`
+Week 1          Week 2-3          Month 2           Month 3+
+  │                │                 │                  │
+  ▼                ▼                 ▼                  ▼
+
+┌────────┐    ┌──────────┐    ┌──────────┐    ┌────────────────┐
+│ Instruc-│    │ + Prompt │    │ + Skills │    │ + Agents &     │
+│ tions   │ →  │   Files  │ →  │          │ →  │   Sub-Agents   │
+│ only    │    │          │    │          │    │                │
+└────────┘    └──────────┘    └──────────┘    └────────────────┘
+
+"Copilot        "Copilot         "Copilot         "Copilot runs
+ follows our     runs our         has our           our development
+ standards"      playbook"        expertise"        workflow"
+\`\`\`
+
+> **You don't need all five on day one.**
+> Start with instructions. Add layers as your team's AI fluency grows.`);
+
+slides.push(`# Handoffs
+
+## Guided workflows between agents
+
+---
+
+### What they are
+
+Handoffs let an agent **recommend the next agent** to the user in a structured
+way. Instead of the user needing to know which agent to call next, the
+current agent suggests it.
+
+This is **not** the same as sub-agents. Handoffs keep the user in control —
+they're suggestions, not autonomous delegation.
+
+---
+
+### The difference
+
+\`\`\`mermaid
+graph LR
+    subgraph "Sub-Agent (autonomous)"
+        A1[Planner] -->|spawns| B1[Implementer]
+        B1 -->|result| A1
+    end
+
+    subgraph "Handoff (guided)"
+        A2[Planner] -.->|"suggests @implementer"| U[User]
+        U -->|"@implementer do X"| B2[Implementer]
+    end
+
+    style A1 fill:#1a73e8,color:#fff
+    style B1 fill:#34a853,color:#fff
+    style A2 fill:#1a73e8,color:#fff
+    style B2 fill:#34a853,color:#fff
+    style U fill:#333,color:#fff
+\`\`\`
+
+---
+
+### Defining handoffs in an agent
+
+\`\`\`yaml
+handoffs:
+  - label: Start Implementation
+    agent: implementer
+    prompt: Implement the tasks outlined above.
+    send: false
+  - label: Review Changes
+    agent: reviewer
+    prompt: Review the implementation for bugs and style issues.
+\`\`\`
+
+When the agent finishes, VS Code shows clickable handoff buttons.
+If \`send: true\`, the prompt auto-submits to the next agent.
+
+---
+
+### When to use handoffs vs. sub-agents
+
+\`\`\`
+┌────────────────────────────────┬─────────────────────────────────┐
+│          Handoffs              │          Sub-Agents             │
+├────────────────────────────────┼─────────────────────────────────┤
+│ User stays in control          │ Agent orchestrates autonomously │
+│ Good for learning workflows    │ Good for practiced workflows    │
+│ Each step is visible           │ Only final result is visible    │
+│ User can skip/reorder steps    │ Agent decides the order         │
+│ Lower risk (human in the loop) │ Higher throughput (parallel)    │
+└────────────────────────────────┴─────────────────────────────────┘
+\`\`\`
+
+> **Rule of thumb:** Handoffs are training wheels for multi-agent workflows.
+> Once your team trusts the flow, switch to sub-agents for speed.`);
+
+slides.push(`# Key Takeaways
+
+## Five concepts, five sentences
+
+---
+
+### The one-liner for each
+
+\`\`\`
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│  Instructions   "Always do this"         → your repo's laws      │
+│                                                                  │
+│  Prompt Files   "When I ask, do this"    → saved recipes         │
+│                                                                  │
+│  Skills         "Here's how to do this"  → teachable abilities   │
+│                                                                  │
+│  Agents         "You are this person"    → autonomous personas   │
+│                                                                  │
+│  Sub-Agents     "Delegate this part"     → isolated delegation   │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+\`\`\`
+
+---
+
+### The three things to remember
+
+**1. They're layers, not alternatives**
+
+\`\`\`
+Instructions  ⊂  Prompt Files  ⊂  Skills  ⊂  Agents  ⊂  Sub-Agents
+     ↑                                                        ↑
+  foundation                                             orchestration
+\`\`\`
+
+---
+
+**2. Start simple, add complexity only when needed**
+
+\`\`\`
+Week 1:  copilot-instructions.md                ← start here
+Week 2:  + path-specific *.instructions.md
+Week 3:  + .prompt.md files for common tasks
+Month 2: + SKILL.md for repeatable capabilities
+Month 3: + .agent.md for specialist personas
+         + sub-agents for orchestration
+\`\`\`
+
+---
+
+**3. The mental model is portable**
+
+\`\`\`
+Same concepts, different file paths:
+
+  Copilot:      .github/copilot-instructions.md
+  Claude Code:  CLAUDE.md
+  VS Code:      AGENTS.md
+
+  Copilot:      .github/skills/X/SKILL.md
+  Claude Code:  .claude/skills/X/SKILL.md
+
+  Copilot:      .github/agents/X.agent.md
+  Claude Code:  .claude/agents/X.md
+\`\`\`
+
+Learn the concepts once → apply them everywhere.
+
+---
+
+### Go build something
+
+\`\`\`
+ ┌──────────────────────────────────────────────┐
+ │                                               │
+ │   mkdir -p .github/instructions               │
+ │   touch .github/copilot-instructions.md       │
+ │                                               │
+ │   # That's it. You've started.                │
+ │                                               │
+ └──────────────────────────────────────────────┘
+\`\`\`
+
+> **The best AI customization is the one your team actually commits to the repo.**
+
+---
+
+*Thank you*`);
+
+slides.push(`# Bonus: Hooks
+
+## Deterministic automation at agent lifecycle points
+
+---
+
+### What they are
+
+Hooks are **shell commands** that execute at key points during an agent session.
+Unlike instructions (which guide the AI), hooks run **your code** with
+guaranteed outcomes — no matter how the agent is prompted.
+
+> **Status:** Preview — VS Code 1.109.3+
+
+---
+
+### Why hooks matter
+
+\`\`\`
+Without hooks:
+  "Hey Copilot, please run prettier after editing files"
+  → Sometimes it does. Sometimes it forgets. Non-deterministic.
+
+With hooks:
+  PostToolUse hook → prettier runs EVERY time a file is edited.
+  → Deterministic. Guaranteed. No prompt required.
+\`\`\`
+
+Instructions *suggest*. Hooks *enforce*.
+
+---
+
+### The eight lifecycle events
+
+| Event              | Fires when…                            | Use case                         |
+|--------------------|----------------------------------------|----------------------------------|
+| \`SessionStart\`     | New agent session begins               | Inject project context           |
+| \`UserPromptSubmit\` | User sends a prompt                    | Audit requests                   |
+| \`PreToolUse\`       | Before any tool runs                   | Block dangerous operations       |
+| \`PostToolUse\`      | After a tool completes                 | Auto-format, lint, log           |
+| \`PreCompact\`       | Before context is compacted            | Export state before truncation   |
+| \`SubagentStart\`    | Subagent is spawned                    | Track nested agent usage         |
+| \`SubagentStop\`     | Subagent completes                     | Aggregate results                |
+| \`Stop\`             | Agent session ends                     | Generate reports, cleanup        |
+
+---
+
+### Real-world scenario: auto-format + auto-lint on every edit
+
+\`\`\`json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "npx prettier --write \\"$TOOL_INPUT_FILE_PATH\\"",
+        "windows": "npx prettier --write \\"%TOOL_INPUT_FILE_PATH%\\""
+      },
+      {
+        "type": "command",
+        "command": "npx eslint --fix \\"$TOOL_INPUT_FILE_PATH\\"",
+        "windows": "npx eslint --fix \\"%TOOL_INPUT_FILE_PATH%\\"",
+        "timeout": 15
+      }
+    ]
+  }
+}
+\`\`\`
+
+That's it. Two hooks, one file. Every time the agent edits a file:
+1. Prettier formats it &nbsp; 2. ESLint fixes what it can
+
+No instructions needed. No "please remember to format." It just happens.
+
+---
+
+### Hooks vs. Instructions — complementary, not competing
+
+\`\`\`
+┌────────────────────────────────┬──────────────────────────────────┐
+│         Instructions           │            Hooks                 │
+├────────────────────────────────┼──────────────────────────────────┤
+│ Non-deterministic (guidance)   │ Deterministic (guaranteed)       │
+│ Influence AI decisions         │ Execute your code                │
+│ "Please run tests"             │ Tests run. Period.               │
+│ Applied to AI context          │ Run as shell commands            │
+│ Can be overridden by prompts   │ Cannot be bypassed by prompts   │
+└────────────────────────────────┴──────────────────────────────────┘
+\`\`\`
+
+> **Rule of thumb:** Instructions tell the agent what to *think*.
+> Hooks control what *actually happens*.`);
+
+slides.push(`# Sources & Further Reading
+
+---
+
+### GitHub Copilot — VS Code Docs
+
+| #  | Topic                      | Link |
+|----|----------------------------|------|
+| 1  | Custom Agents              | [code.visualstudio.com/docs/copilot/customization/custom-agents](https://code.visualstudio.com/docs/copilot/customization/custom-agents) |
+| 2  | Agents Overview            | [code.visualstudio.com/docs/copilot/agents/overview](https://code.visualstudio.com/docs/copilot/agents/overview) |
+| 3  | Sub-Agents                 | [code.visualstudio.com/docs/copilot/agents/subagents](https://code.visualstudio.com/docs/copilot/agents/subagents) |
+| 4  | Custom Instructions        | [code.visualstudio.com/docs/copilot/customization/custom-instructions](https://code.visualstudio.com/docs/copilot/customization/custom-instructions) |
+| 5  | Prompt Files               | [code.visualstudio.com/docs/copilot/customization/prompt-files](https://code.visualstudio.com/docs/copilot/customization/prompt-files) |
+| 6  | Agent Skills               | [code.visualstudio.com/docs/copilot/customization/agent-skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills) |
+| 7  | Hooks (Preview)            | [code.visualstudio.com/docs/copilot/customization/hooks](https://code.visualstudio.com/docs/copilot/customization/hooks) |
+
+---
+
+### GitHub Copilot — GitHub Docs
+
+| #  | Topic | Link |
+|----|-------|------|
+| 8  | Repository Custom Instructions | [docs.github.com/…/add-repository-instructions](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions) |
+| 9  | Prompt Files Examples          | [docs.github.com/…/prompt-files](https://docs.github.com/en/copilot/tutorials/customization-library/prompt-files) |
+| 10 | Creating Agent Skills (CLI)    | [docs.github.com/…/create-skills](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-skills) |
+
+---
+
+### Claude Code — Anthropic Docs
+
+| # | Topic | Link |
+|---|-------|------|
+| 13 | Memory | [code.claude.com/docs/en/memory](https://code.claude.com/docs/en/memory) |
+| 14 | Skills | [code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills) |
+| 15 | Sub-Agents | [code.claude.com/docs/en/sub-agents](https://code.claude.com/docs/en/sub-agents) |
+| 16 | Hooks | [code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks) |
+
+---
+
+### Context Engineering
+
+| # | Topic | Link |
+|---|-------|------|
+| 17 | Effective Context Engineering for AI Agents | [anthropic.com/engineering/…](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) |
+
+---
+
+> All links verified as of **February 24, 2026**.`);
+
+// ── slide titles for picker ──
+const titles = [
+  '0 — Title',
+  '1 — The Problem',
+  '2 — The Mental Model',
+  '3 — Instructions',
+  '4 — Prompt Files',
+  '5 — Skills',
+  '6 — Agents',
+  '7 — Sub-Agents',
+  '8 — The Spectrum',
+  '9 — Multi-Agent Reality',
+  '10 — Practical Operating Model',
+  '11 — Handoffs',
+  '12 — Key Takeaways',
+  '13 — Bonus: Hooks',
+  'Sources & Further Reading'
+];
+
+// ── init ──
+let current = 0;
+const deck = document.getElementById('deck');
+const counter = document.getElementById('counter');
+const progressFill = document.getElementById('progress-fill');
+const picker = document.getElementById('picker');
+const btnPrev = document.getElementById('btn-prev');
+const btnNext = document.getElementById('btn-next');
+const btnList = document.getElementById('btn-list');
+
+// configure marked
+marked.setOptions({ breaks: true, gfm: true });
+
+// ── build slides ──
+slides.forEach((md, i) => {
+  const el = document.createElement('div');
+  el.className = 'slide' + (i === 0 ? ' active' : '');
+  el.innerHTML = '<div class="slide-inner">' + marked.parse(md) + '</div>';
+  deck.appendChild(el);
+});
+
+// ── build picker ──
+titles.forEach((t, i) => {
+  const d = document.createElement('div');
+  d.className = 'pick-item' + (i === 0 ? ' active' : '');
+  d.textContent = t;
+  d.addEventListener('click', () => { goTo(i); closePicker(); });
+  picker.appendChild(d);
+});
+
+function updateUI() {
+  const els = deck.querySelectorAll('.slide');
+  els.forEach((el, i) => el.classList.toggle('active', i === current));
+  counter.textContent = (current + 1) + ' / ' + slides.length;
+  progressFill.style.width = ((current / (slides.length - 1)) * 100) + '%';
+  btnPrev.disabled = current === 0;
+  btnNext.disabled = current === slides.length - 1;
+  picker.querySelectorAll('.pick-item').forEach((el, i) =>
+    el.classList.toggle('active', i === current));
+  // scroll to top of new slide
+  deck.querySelector('.slide.active').scrollTop = 0;
+}
+
+function goTo(idx) {
+  if (idx < 0 || idx >= slides.length) return;
+  current = idx;
+  updateUI();
+}
+function next() { goTo(current + 1); }
+function prev() { goTo(current - 1); }
+function closePicker() { picker.classList.remove('open'); }
+
+btnPrev.addEventListener('click', prev);
+btnNext.addEventListener('click', next);
+btnList.addEventListener('click', () => picker.classList.toggle('open'));
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+    e.preventDefault(); next();
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault(); prev();
+  }
+  if (e.key === 'Escape') closePicker();
+  if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+  if (e.key === 'End') { e.preventDefault(); goTo(slides.length - 1); }
+});
+
+// close picker when clicking outside
+document.addEventListener('click', (e) => {
+  if (!picker.contains(e.target) && e.target !== btnList) closePicker();
+});
+
+// ── mermaid ──
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#1a73e8',
+    primaryTextColor: '#fff',
+    lineColor: '#58a6ff',
+    secondaryColor: '#161b22',
+    tertiaryColor: '#0d1117'
+  }
+});
+
+async function renderMermaid() {
+  const blocks = deck.querySelectorAll('pre code.language-mermaid');
+  for (let i = 0; i < blocks.length; i++) {
+    const pre = blocks[i].parentElement;
+    const code = blocks[i].textContent;
+    const id = 'mermaid-' + i;
+    try {
+      const { svg } = await mermaid.render(id, code);
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerHTML = svg;
+      pre.replaceWith(div);
+    } catch (err) {
+      console.warn('Mermaid render failed for block ' + i, err);
+    }
+  }
+}
+
+renderMermaid().then(() => updateUI());
+</script>
+</body>
+</html>
