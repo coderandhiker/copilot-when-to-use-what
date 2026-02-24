@@ -21,7 +21,8 @@ for conceptual continuity.
 | 10 | Practical Operating Model — five-step plan |
 | 11 | Handoffs |
 | 12 | Key Takeaways |
-| 13 | Sources & Further Reading |
+| 13 | Bonus: Hooks — lifecycle automation |
+| sources | Sources & Further Reading |
 
 ## Key concepts covered
 
@@ -31,6 +32,7 @@ for conceptual continuity.
 - **Agents** — `.agent.md` personas with tools and model preferences
 - **Sub-Agents** — isolated delegation between agents
 - **Handoffs** — guided user-in-the-loop workflows
+- **Hooks** — deterministic shell commands at agent lifecycle points
 
 ## Rendering
 
@@ -42,7 +44,7 @@ The slides use standard Markdown with Mermaid diagrams. They render well in:
 
 ## Accuracy
 
-All citations were verified against live documentation as of **February 24, 2026**. AI work moves FAST - if you see something that looks incorrect, it may not be February 24, 2026 anymore :) Source links are collected in [`presentation/slide13.md`](presentation/slide13.md).
+All citations were verified against live documentation as of **February 24, 2026**. AI work moves FAST - if you see something that looks incorrect, it may not be February 24, 2026 anymore :) Source links are collected in [`presentation/sources.md`](presentation/sources.md).
 
 ## License
 
