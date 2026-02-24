@@ -28,7 +28,7 @@
 
 | Dimension         | Instructions          | Prompt Files       | Skills              | Agents             | Sub-Agents          |
 |-------------------|-----------------------|--------------------|---------------------|--------------------|---------------------|
-| **Activation**    | Automatic             | `#` reference      | Agent-selected      | `@` mention        | Agent-spawned       |
+| **Activation**    | Automatic             | `/` slash command  | Agent-selected      | Agent dropdown     | Agent-spawned       |
 | **Persistence**   | Permanent per repo    | Permanent per repo | Permanent per repo  | Permanent per repo | Ephemeral per task  |
 | **Scope**         | Broad (all requests)  | Narrow (one task)  | Narrow (one ability)| Broad (persona)    | Narrow (sub-task)   |
 | **Identity**      | None                  | None               | None                | Yes — persona      | Yes — inherited     |

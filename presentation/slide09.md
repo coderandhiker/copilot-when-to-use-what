@@ -14,8 +14,8 @@ side by side:
 │                    VS Code 1.109                     │
 │                                                      │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐          │
-│  │  Copilot  │  │  Claude   │  │  Codex   │  ...    │
-│  │  Agent    │  │  Agent    │  │  Agent   │          │
+│   │  Copilot  │  │  Claude   │  │  Custom  │  ...    │
+│   │  Agent    │  │  Agent    │  │  Agents  │          │
 │  └─────┬────┘  └─────┬────┘  └─────┬────┘          │
 │        │              │              │               │
 │        └──────────────┴──────────────┘               │
@@ -42,7 +42,6 @@ your-repo/
 │   └── copilot-instructions.md     ← Copilot reads this
 ├── AGENTS.md                        ← VS Code agents read this
 ├── CLAUDE.md                        ← Claude agent reads this
-├── GEMINI.md                        ← Gemini agent reads this
 └── src/...
 ```
 
@@ -77,7 +76,7 @@ your-repo/
 | Skills         | `.github/skills/`            | `.claude/skills/`         |
 | Agents         | `.github/agents/*.agent.md`  | `.claude/agents/*.md`     |
 | Sub-agents     | Same files, agent-spawned    | Same files, agent-spawned |
-| Hooks          | *(not applicable)*           | `.claude/hooks/`          |
+| Hooks          | `.github/hooks/*.json`       | `.claude/hooks/`          |
 | Memory         | *(session-based)*            | `.claude/memory.json`     |
 
 ---

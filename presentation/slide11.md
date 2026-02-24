@@ -58,9 +58,16 @@ tools:
   - read_file
   - semantic_search
 handoffs:
-  - implementer
-  - reviewer
-  - security
+  - label: Start Implementation
+    agent: implementer
+    prompt: Implement the tasks outlined above.
+    send: false
+  - label: Review Changes
+    agent: reviewer
+    prompt: Review the implementation for bugs and style issues.
+  - label: Security Audit
+    agent: security
+    prompt: Audit the changes for OWASP Top 10 vulnerabilities.
 ---
 
 # Planner
@@ -72,7 +79,7 @@ When you've finished breaking down a feature:
 ```
 
 When the planner finishes, VS Code shows clickable handoff buttons
-in the chat UI, making it easy for the user to continue the flow.
+in the chat UI. If `send: true`, the prompt auto-submits to the next agent.
 
 ---
 

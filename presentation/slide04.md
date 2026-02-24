@@ -8,7 +8,7 @@
 
 Prompt files are `.prompt.md` files that act like **saved recipes**. Unlike
 instructions (which are always-on), prompt files are **invoked explicitly** via
-`#` reference in chat. They can wire in tools, reference agents, and define
+`/` slash command in chat. They can wire in tools, reference agents, and define
 multi-step workflows.
 
 > **Status:** Public preview — VS Code, Visual Studio, and JetBrains
@@ -47,8 +47,8 @@ tools:
 # New API Endpoint
 
 ## Inputs
-- **Resource name:** ${{resource}}  (e.g., "users", "orders")
-- **HTTP method:** ${{method}}      (e.g., GET, POST, PUT, DELETE)
+- **Resource name:** ${input:resource}  (e.g., "users", "orders")
+- **HTTP method:** ${input:method}      (e.g., GET, POST, PUT, DELETE)
 
 ## Steps
 
@@ -74,7 +74,7 @@ Use the pattern established in `src/routes/health.ts` as a reference.
 
 ### Invoking a prompt file
 
-In VS Code chat, type `/` or `#` (recently used) and select the prompt:
+In VS Code chat, type `/` and select the prompt:
 
 ```
 User:  /new-api-endpoint
@@ -88,16 +88,43 @@ multi-step plan — creating files, running tests, and fixing lint errors.
 
 ---
 
+### Context variables
+
+Prompt files support built-in context variables using `${variableName}` syntax:
+
+| Category    | Variables                                                              |
+|-------------|------------------------------------------------------------------------|
+| Workspace   | `${workspaceFolder}`, `${workspaceFolderBasename}`                     |
+| Selection   | `${selection}`, `${selectedText}`                                      |
+| File        | `${file}`, `${fileBasename}`, `${fileDirname}`,                       |
+|             | `${fileBasenameNoExtension}`                                           |
+| User input  | `${input:varName}`, `${input:varName:placeholder}`                     |
+
+```markdown
+## Context
+- Current file: ${file}
+- Working directory: ${workspaceFolder}
+- Selected code:
+${selection}
+
+## Task
+Refactor the ${input:component} component to use ${input:pattern:"e.g. hooks"}
+```
+
+> `${input:x}` prompts the user for a value when the prompt file runs.
+> The other variables are filled in automatically from editor state.
+
+---
+
 ### Prompt files with agent references
 
 ```markdown
 ---
 name: 'Full Feature Implementation'
 description: 'End-to-end feature: design, implement, test, document'
-agents:
-  - designer
-  - implementer
-  - tester
+agent: 'planner'
+tools:
+  - agent
 ---
 
 # Full Feature Implementation
@@ -118,11 +145,12 @@ agents:
 ├─────────────────────┼─────────────────┼────────────────┤
 │ Activation          │  Always-on      │  On-demand (/) │
 │ Purpose             │  Guardrails     │  Recipes       │
-│ Variables           │  No             │  Yes (${{x}})  │
+│ Variables           │  No             │  Yes (${x})    │
 │ Tool references     │  No             │  Yes           │
 │ Agent references    │  No             │  Yes           │
 │ Shared with team    │  ✅ via repo    │  ✅ via repo  │
 │ File extension      │  .instructions  │  .prompt.md    │
+│                     │  .md            │                │
 │ Location            │  .github/       │  .github/      │
 │                     │ instructions/   │  prompts/      │
 └─────────────────────┴─────────────────┴────────────────┘
