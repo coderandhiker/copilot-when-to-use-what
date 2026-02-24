@@ -74,10 +74,10 @@ Use the pattern established in `src/routes/health.ts` as a reference.
 
 ### Invoking a prompt file
 
-In VS Code chat, type `#` and select the prompt:
+In VS Code chat, type `/` or `#` (recently used) and select the prompt:
 
 ```
-User:  #new-api-endpoint
+User:  /new-api-endpoint
 
        resource: products
        method: POST
@@ -116,15 +116,15 @@ agents:
 ┌─────────────────────┬──────────────────────────────────┐
 │                     │  Instructions   │  Prompt Files  │
 ├─────────────────────┼─────────────────┼────────────────┤
-│ Activation          │  Always-on      │  On-demand (#) │
+│ Activation          │  Always-on      │  On-demand (/) │
 │ Purpose             │  Guardrails     │  Recipes       │
 │ Variables           │  No             │  Yes (${{x}})  │
 │ Tool references     │  No             │  Yes           │
 │ Agent references    │  No             │  Yes           │
-│ Shared with team    │  ✅ via repo    │  ✅ via repo   │
+│ Shared with team    │  ✅ via repo    │  ✅ via repo  │
 │ File extension      │  .instructions  │  .prompt.md    │
 │ Location            │  .github/       │  .github/      │
-│                     │ instructions/   │  prompts/       │
+│                     │ instructions/   │  prompts/      │
 └─────────────────────┴─────────────────┴────────────────┘
 ```
 
